@@ -14,6 +14,7 @@ var (
 type StoreService interface {
 	GetStoreByUserID(userId int64) (*model.Store, error)
 	GetProduct(storeId, productId int64) (*model.Product, error)
+	GetProductsWithPagination(storeId, page, size int64) ([]*model.Product, error)
 	CreateProduct(storeId int64, product *model.Product) (int64, error)
 	DeleteProduct(storeId, productId int64) error
 	UpdateProduct(storeId int64, product *model.Product) error
@@ -60,6 +61,10 @@ func (s *storeServiceImpl) UpdateProduct(userId int64, product *model.Product) e
 		return ErrProductNotFound
 	}
 	return s.repo.product.UpdateProduct(store.ID, product)
+}
+
+func (s *storeServiceImpl) GetProductsWithPagination(storeId int64, cursor int64, limit int64) ([]*model.Product, error) {
+	return s.repo.product.FindProductsWithPagination(storeId, cursor, limit)
 }
 
 func NewStoreService(repo repository.Repository) StoreService {

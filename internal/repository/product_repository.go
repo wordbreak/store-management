@@ -15,7 +15,7 @@ type ProductRepository interface {
 	UpdateProduct(storeId int64, product *model.Product) error
 	DeleteProduct(storeId, productId int64) error
 	FindProduct(storeId, productId int64) (*model.Product, error)
-	FindProductsByStoreID(storeId int64, cursor int64, limit int64) ([]*model.Product, error)
+	FindProductsWithPagination(storeId int64, cursor int64, limit int64) ([]*model.Product, error)
 }
 type productRepositoryImpl struct {
 	writer      datasource.SQL
@@ -128,9 +128,29 @@ func (p *productRepositoryImpl) FindProduct(storeId, productId int64) (*model.Pr
 	return &product, nil
 }
 
-func (p *productRepositoryImpl) FindProductsByStoreID(storeId int64, cursor int64, limit int64) ([]*model.Product, error) {
+func (p *productRepositoryImpl) FindProductsWithPagination(storeId int64, cursor int64, limit int64) ([]*model.Product, error) {
 	var products []*model.Product
-	err := p.reader.Select(&products, "SELECT * FROM product WHERE store_id = ? AND id < ? ORDER BY id DESC LIMIT ?", storeId, cursor, limit)
+
+	var cursorCondition string
+	if cursor > 0 {
+		cursorCondition = "AND p.id < ?"
+	}
+
+	query := fmt.Sprintf(`
+        SELECT p.* FROM product p
+        INNER JOIN store_product sp ON p.id = sp.product_id
+        WHERE sp.store_id = ? %s
+        ORDER BY p.id DESC
+        LIMIT ?
+    `, cursorCondition)
+
+	var err error
+	if cursor > 0 {
+		err = p.reader.Select(&products, query, storeId, cursor, limit)
+	} else {
+		err = p.reader.Select(&products, query, storeId, limit)
+	}
+
 	if err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
 			return nil, datasource.ErrNoRows

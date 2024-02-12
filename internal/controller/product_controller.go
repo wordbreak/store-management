@@ -7,6 +7,7 @@ import (
 	"store-management/internal/model"
 	"store-management/internal/response"
 	"store-management/internal/service"
+	"strconv"
 	"time"
 
 	"github.com/gin-gonic/gin"
@@ -17,6 +18,7 @@ type ProductController interface {
 	Create(ctx *AuthContext)
 	Delete(ctx *AuthContext)
 	Update(ctx *AuthContext)
+	List(ctx *AuthContext)
 }
 
 type productController struct {
@@ -207,4 +209,31 @@ func (c *productController) Update(ctx *AuthContext) {
 	}
 
 	ctx.JSON(http.StatusOK, response.New(http.StatusOK, response.MessageOK, nil))
+}
+
+const defaultLimit = 10
+
+func (c *productController) List(ctx *AuthContext) {
+	cursorQuery := ctx.Query("cursor")
+
+	cursor, err := strconv.ParseInt(cursorQuery, 10, 64)
+	if err != nil {
+		cursor = 0
+	}
+
+	store, err := c.storeService.GetStoreByUserID(ctx.User.ID)
+	if err != nil {
+		ctx.JSON(http.StatusInternalServerError, response.New(http.StatusInternalServerError, response.MessageInternalError, nil))
+		return
+	}
+
+	products, err := c.storeService.GetProductsWithPagination(store.ID, cursor, defaultLimit)
+	if err != nil {
+		ctx.JSON(http.StatusInternalServerError, response.New(http.StatusInternalServerError, response.MessageInternalError, nil))
+		return
+	}
+
+	ctx.JSON(http.StatusOK, response.New(http.StatusOK, response.MessageOK, gin.H{
+		"items": products,
+	}))
 }
