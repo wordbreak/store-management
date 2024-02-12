@@ -24,7 +24,8 @@ type AuthService interface {
 
 type authServiceImpl struct {
 	repo struct {
-		user repository.UserRepository
+		user  repository.UserRepository
+		store repository.StoreRepository
 	}
 }
 
@@ -77,7 +78,14 @@ func (s authServiceImpl) Register(phoneNumber string, password string) error {
 		panic(err)
 	}
 
-	return nil
+	user, err = s.repo.user.FindUser(phoneNumber)
+	if err != nil {
+		panic(err)
+	}
+
+	err = s.repo.store.CreateStore(user.ID)
+
+	return err
 }
 
 func (s authServiceImpl) Login(phoneNumber string, password string) (*model.User, error) {
@@ -106,5 +114,6 @@ func (s authServiceImpl) Login(phoneNumber string, password string) (*model.User
 func NewAuthService(repo repository.Repository) AuthService {
 	service := authServiceImpl{}
 	service.repo.user = repo.UserRepository()
+	service.repo.store = repo.StoreRepository()
 	return service
 }

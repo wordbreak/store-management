@@ -13,13 +13,15 @@ import (
 
 type AuthServiceSuite struct {
 	suite.Suite
-	mockedUserRepository *mock2.UserRepositoryMock
-	service              AuthService
+	mockedUserRepository  *mock2.UserRepositoryMock
+	mockedStoreRepository *mock2.StoreRepositoryMock
+	service               AuthService
 }
 
 func (s *AuthServiceSuite) SetupTest() {
 	s.mockedUserRepository = &mock2.UserRepositoryMock{}
-	mockRepo := mock2.NewMockedRepository(s.mockedUserRepository)
+	s.mockedStoreRepository = &mock2.StoreRepositoryMock{}
+	mockRepo := mock2.NewMockedRepository(s.mockedUserRepository, s.mockedStoreRepository)
 	s.service = NewAuthService(mockRepo)
 }
 
@@ -40,7 +42,9 @@ func (s *AuthServiceSuite) TestRegister_Success() {
 	password := "password"
 
 	s.mockedUserRepository.On("FindUser", phoneNumber).Return(nil, datasource.ErrNoRows).Once()
+	s.mockedUserRepository.On("FindUser", phoneNumber).Return(&model.User{}, nil).Once()
 	s.mockedUserRepository.On("CreateUser", phoneNumber, mock.Anything).Return(nil).Once()
+	s.mockedStoreRepository.On("CreateStore", mock.Anything).Return(nil).Once()
 
 	err := s.service.Register(phoneNumber, password)
 	s.NoError(err)

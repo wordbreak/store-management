@@ -16,8 +16,14 @@ func (m *MockedRepository) UserRepository() repository.UserRepository {
 	return args.Get(0).(repository.UserRepository)
 }
 
-func NewMockedRepository(userRepoMock *UserRepositoryMock) *MockedRepository {
+func (m *MockedRepository) StoreRepository() repository.StoreRepository {
+	args := m.Called()
+	return args.Get(0).(repository.StoreRepository)
+}
+
+func NewMockedRepository(userRepoMock *UserRepositoryMock, storeRepoMock *StoreRepositoryMock) *MockedRepository {
 	mockRepo := new(MockedRepository)
 	mockRepo.On("UserRepository").Return(userRepoMock)
+	mockRepo.On("StoreRepository").Return(storeRepoMock)
 	return mockRepo
 }
