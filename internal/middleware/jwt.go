@@ -6,6 +6,7 @@ import (
 	"os"
 	"store-management/internal/repository"
 	"store-management/internal/response"
+	"strconv"
 	"time"
 
 	"github.com/gin-gonic/gin"
@@ -35,10 +36,11 @@ func JwtMiddleware(userRepository repository.UserRepository) gin.HandlerFunc {
 				return
 			}
 
-			if claimedID, ok := claims["id"].(int64); ok {
-				if user, err := userRepository.FindUserByID(claimedID); err == nil {
-					user.ID = claimedID
-					c.Set("user", user)
+			if sub, err := claims.GetSubject(); err == nil {
+				if id, err := strconv.ParseInt(sub, 10, 64); err == nil {
+					if user, err := userRepository.FindUserByID(id); err == nil {
+						c.Set("user", user)
+					}
 				}
 			}
 		}

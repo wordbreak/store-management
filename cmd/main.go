@@ -49,8 +49,7 @@ func main() {
 		DBName: os.Getenv("DB_READER_DBNAME"),
 	})
 	defer sqlReader.Close()
-
-	repository.Init(sqlWriter, sqlReader)
+	repository.Init(sqlWriter, sqlReader, sqlWriter)
 	service.Init(repository.Get())
 	r.Use(middleware.JwtMiddleware(repository.Get().UserRepository()))
 	router.Init(r, service.Get())

@@ -33,8 +33,8 @@ func (s *storeRepositoryImpl) CreateStore(userId int64) error {
 }
 
 func (s *storeRepositoryImpl) FindStoreByUserID(userId int64) (*model.Store, error) {
-	var store *model.Store
-	err := s.reader.Get(store, "SELECT id, user_id FROM store WHERE user_id = ?", userId)
+	var store model.Store
+	err := s.reader.Get(&store, "SELECT id, user_id FROM store WHERE user_id = ?", userId)
 
 	if err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
@@ -42,5 +42,5 @@ func (s *storeRepositoryImpl) FindStoreByUserID(userId int64) (*model.Store, err
 		}
 		panic(err)
 	}
-	return store, nil
+	return &store, nil
 }

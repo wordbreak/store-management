@@ -5,7 +5,8 @@ import "store-management/internal/repository"
 var service *Service
 
 type Service struct {
-	AuthService AuthService
+	AuthService  AuthService
+	StoreService StoreService
 }
 
 func Init(repository repository.Repository) {
@@ -14,7 +15,8 @@ func Init(repository repository.Repository) {
 	}
 
 	service = &Service{
-		AuthService: NewAuthService(repository),
+		AuthService:  NewAuthService(repository),
+		StoreService: NewStoreService(repository),
 	}
 }
 

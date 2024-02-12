@@ -2,11 +2,11 @@ package controller
 
 import (
 	"errors"
-	"fmt"
 	"net/http"
 	"os"
 	"store-management/internal/response"
 	"store-management/internal/service"
+	"strconv"
 	"time"
 
 	"github.com/gin-gonic/gin"
@@ -78,13 +78,12 @@ func (c authController) Login(ctx *gin.Context) {
 	}
 
 	token := jwt.NewWithClaims(jwt.SigningMethodHS256, jwt.MapClaims{
-		"sub": user.ID,
+		"sub": strconv.FormatInt(user.ID, 10),
 		"exp": time.Now().Add(time.Hour).Unix(),
 	})
 	tokenString, err := token.SignedString([]byte(os.Getenv("JWT_SECRET")))
 
 	if err != nil {
-		fmt.Println(err)
 		ctx.JSON(http.StatusInternalServerError, response.New(http.StatusInternalServerError, response.MessageInternalError, nil))
 		return
 	}
