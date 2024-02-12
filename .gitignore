@@ -92,3 +92,8 @@ tags
 # local development env files
 main
 tmp/
+
+# dotenvs
+.env
+.env.*
+!.env.example

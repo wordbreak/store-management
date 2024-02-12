@@ -1,7 +1,9 @@
 package response
 
 const (
-	ResponseMessageOK = "ok"
+	MessageOK            = "ok"
+	MessageInvalidInput  = "invalid input"
+	MessageInternalError = "internal server error"
 )
 
 type Meta struct {
