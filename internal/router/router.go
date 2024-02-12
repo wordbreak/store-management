@@ -12,4 +12,5 @@ func Init(router *gin.Engine, srv *service.Service) {
 
 	v1 := router.Group("/v1")
 	v1.POST("/auth/register", authController.Register)
+	v1.POST("/auth/login", authController.Login)
 }

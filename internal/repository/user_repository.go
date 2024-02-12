@@ -12,6 +12,7 @@ import (
 type UserRepository interface {
 	CreateUser(phoneNumber, password string) error
 	FindUser(phoneNumber string) (*model.User, error)
+	FindUserByID(id int64) (*model.User, error)
 }
 
 type userRepositoryImpl struct {
@@ -43,6 +44,19 @@ func (u *userRepositoryImpl) CreateUser(phoneNumber, password string) error {
 func (u *userRepositoryImpl) FindUser(phoneNumber string) (*model.User, error) {
 	var user model.User
 	err := u.reader.Get(&user, "SELECT id, phone_number, password FROM user WHERE phone_number = ?", phoneNumber)
+
+	if err != nil {
+		if errors.Is(err, sql.ErrNoRows) {
+			return nil, datasource.ErrNoRows
+		}
+		panic(err)
+	}
+	return &user, err
+}
+
+func (u *userRepositoryImpl) FindUserByID(id int64) (*model.User, error) {
+	var user model.User
+	err := u.reader.Get(&user, "SELECT id, phone_number, password FROM user WHERE id = ?", id)
 
 	if err != nil {
 		if errors.Is(err, sql.ErrNoRows) {

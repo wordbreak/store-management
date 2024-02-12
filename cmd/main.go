@@ -52,7 +52,7 @@ func main() {
 
 	repository.Init(sqlWriter, sqlReader)
 	service.Init(repository.Get())
-	r.Use(middleware.JwtMiddleware())
+	r.Use(middleware.JwtMiddleware(repository.Get().UserRepository()))
 	router.Init(r, service.Get())
 
 	go func() {

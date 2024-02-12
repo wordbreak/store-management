@@ -1,6 +1,7 @@
 package service
 
 import (
+	"encoding/hex"
 	"store-management/internal/datasource"
 	"store-management/internal/model"
 	mock2 "store-management/mock"
@@ -43,6 +44,39 @@ func (s *AuthServiceSuite) TestRegister_Success() {
 
 	err := s.service.Register(phoneNumber, password)
 	s.NoError(err)
+
+	s.mockedUserRepository.AssertExpectations(s.T())
+}
+
+func (s *AuthServiceSuite) TestLogin_UserNotFound_Error() {
+	phoneNumber := "1234567890"
+	password := "password"
+
+	s.mockedUserRepository.On("FindUser", phoneNumber).Return(nil, datasource.ErrNoRows).Once()
+
+	user, err := s.service.Login(phoneNumber, password)
+	s.Nil(user)
+	s.EqualError(err, ErrUserNotFound.Error())
+
+	s.mockedUserRepository.AssertExpectations(s.T())
+}
+
+func (s *AuthServiceSuite) TestLogin_Success() {
+	phoneNumber := "1234567890"
+	password := "password"
+	encryptedPassword := argon2IDHash.GenerateHash([]byte(password), []byte(phoneNumber))
+
+	user := &model.User{
+		PhoneNumber: phoneNumber,
+		Password:    hex.EncodeToString(encryptedPassword),
+	}
+
+	s.mockedUserRepository.On("FindUser", phoneNumber).Return(user, nil).Once()
+
+	user, err := s.service.Login(phoneNumber, password)
+	s.NoError(err)
+	s.NotNil(user)
+	s.Equal(user.PhoneNumber, phoneNumber)
 
 	s.mockedUserRepository.AssertExpectations(s.T())
 }

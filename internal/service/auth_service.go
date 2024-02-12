@@ -6,15 +6,20 @@ import (
 	"encoding/hex"
 	"errors"
 	"store-management/internal/datasource"
+	"store-management/internal/model"
 	"store-management/internal/repository"
 
 	"golang.org/x/crypto/argon2"
 )
 
-var ErrDuplicateUser = errors.New("duplicate user")
+var (
+	ErrDuplicateUser = errors.New("duplicate user")
+	ErrUserNotFound  = errors.New("user not found")
+)
 
 type AuthService interface {
-	Register(phoneNumber string, password string) error //(*model.User, error)
+	Register(phoneNumber string, password string) error
+	Login(phoneNumber string, password string) (*model.User, error)
 }
 
 type authServiceImpl struct {
@@ -47,15 +52,12 @@ func (a *Argon2idHash) GenerateHash(password, salt []byte) []byte {
 	return hash
 }
 
-func (a *Argon2idHash) Compare(hash, salt, password []byte) error {
+func (a *Argon2idHash) Compare(hash, salt, password []byte) bool {
 	generatedHash := a.GenerateHash(password, salt)
-	if !bytes.Equal(hash, generatedHash) {
-		return errors.New("hash doesn't match")
-	}
-	return nil
+	return bytes.Equal(hash, generatedHash)
 }
 
-func (s authServiceImpl) Register(phoneNumber string, password string) error { // (*model.User, error) {
+func (s authServiceImpl) Register(phoneNumber string, password string) error {
 	user, err := s.repo.user.FindUser(phoneNumber)
 	if err != nil && !errors.Is(err, datasource.ErrNoRows) {
 		panic(err)
@@ -76,6 +78,29 @@ func (s authServiceImpl) Register(phoneNumber string, password string) error { /
 	}
 
 	return nil
+}
+
+func (s authServiceImpl) Login(phoneNumber string, password string) (*model.User, error) {
+	user, err := s.repo.user.FindUser(phoneNumber)
+	if err != nil {
+		if errors.Is(err, datasource.ErrNoRows) {
+			return nil, ErrUserNotFound
+		}
+		panic(err)
+	}
+
+	storedPassword, err := hex.DecodeString(user.Password)
+	if err != nil {
+		panic(err)
+	}
+	salt := []byte(user.PhoneNumber)
+	bytedPassword := []byte(password)
+
+	if passwordMatched := argon2IDHash.Compare(storedPassword, salt, bytedPassword); passwordMatched {
+		return user, nil
+	} else {
+		return nil, ErrUserNotFound
+	}
 }
 
 func NewAuthService(repo repository.Repository) AuthService {
