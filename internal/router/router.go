@@ -33,4 +33,5 @@ func Init(router *gin.Engine, srv *service.Service) {
 	v1.POST("/auth/login", authController.Login)
 
 	v1.POST("/product", AuthRequiredHandler(productController.Create))
+	v1.DELETE("/product/:id", AuthRequiredHandler(productController.Delete))
 }

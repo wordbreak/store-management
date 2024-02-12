@@ -10,7 +10,7 @@ import (
 type ProductRepository interface {
 	CreateProduct(storeId int64, product *model.Product) (int64, error)
 	UpdateProduct(product *model.Product) error
-	DeleteProduct(productID int64) error
+	DeleteProduct(storeId, productId int64) error
 	FindProductByID(productID int64) (*model.Product, error)
 	FindProductsByStoreID(storeID int64, cursor int64, limit int64) ([]*model.Product, error)
 }
@@ -54,17 +54,18 @@ func (p *productRepositoryImpl) UpdateProduct(product *model.Product) error {
 	return nil
 }
 
-func (p *productRepositoryImpl) DeleteProduct(productID int64) error {
+func (p *productRepositoryImpl) DeleteProduct(storeId, productId int64) error {
 	tx := p.transaction.MustBegin()
-	_, err := tx.Exec("DELETE FROM product WHERE id = ?", productID)
+	_, err := tx.Exec("DELETE FROM product WHERE id = ?", productId)
 	if err != nil {
 		_ = tx.Rollback()
 		return err
 	}
-	_, err = tx.Exec("DELETE FROM store_product WHERE product_id = ?", productID)
-	if err != nil {
+	res := tx.MustExec("DELETE FROM store_product WHERE store_id = ? AND product_id = ?", storeId, productId)
+	affectedRows, err := res.RowsAffected()
+	if affectedRows == 0 || err != nil {
 		_ = tx.Rollback()
-		return err
+		return errors.New("product not found")
 	}
 	return tx.Commit()
 }

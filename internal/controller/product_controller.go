@@ -13,6 +13,7 @@ import (
 
 type ProductController interface {
 	Create(ctx *AuthContext)
+	Delete(ctx *AuthContext)
 }
 
 type productController struct {
@@ -71,4 +72,27 @@ func (c *productController) Create(ctx *AuthContext) {
 			"id": productId,
 		}))
 	}
+}
+
+type deleteInput struct {
+	ID int64 `uri:"id" binding:"required"`
+}
+
+func (c *productController) Delete(ctx *AuthContext) {
+	var input deleteInput
+	if err := ctx.ShouldBindUri(&input); err != nil {
+		ctx.JSON(http.StatusBadRequest, response.New(http.StatusBadRequest, response.MessageInvalidInput, nil))
+		return
+	}
+
+	if err := c.storeService.DeleteProduct(ctx.User.ID, input.ID); err != nil {
+		if errors.Is(err, service.ErrProductNotFound) {
+			ctx.JSON(http.StatusNotFound, response.New(http.StatusNotFound, err.Error(), nil))
+			return
+		}
+		ctx.JSON(http.StatusInternalServerError, response.New(http.StatusInternalServerError, response.MessageInternalError, nil))
+		return
+	}
+
+	ctx.JSON(http.StatusOK, response.New(http.StatusOK, response.MessageOK, nil))
 }
