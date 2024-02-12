@@ -3,13 +3,16 @@ package repository
 import (
 	"database/sql"
 	"errors"
+	"fmt"
+	"reflect"
 	"store-management/internal/datasource"
 	"store-management/internal/model"
+	"time"
 )
 
 type ProductRepository interface {
 	CreateProduct(storeId int64, product *model.Product) (int64, error)
-	UpdateProduct(product *model.Product) error
+	UpdateProduct(storeId int64, product *model.Product) error
 	DeleteProduct(storeId, productId int64) error
 	FindProductByID(productID int64) (*model.Product, error)
 	FindProductsByStoreID(storeID int64, cursor int64, limit int64) ([]*model.Product, error)
@@ -45,9 +48,43 @@ func (p *productRepositoryImpl) CreateProduct(storeId int64, product *model.Prod
 	return lastInsertId, nil
 }
 
-func (p *productRepositoryImpl) UpdateProduct(product *model.Product) error {
-	_, err := p.writer.Exec("UPDATE product SET category = ?, price = ?, cost = ?, name = ?, description = ?, barcode = ?, expiry_date = ?, size = ? WHERE id = ?",
-		product.Category, product.Price, product.Cost, product.Name, product.Description, product.Barcode, product.ExpiryDate.Format("2006-01-02 15:04:05"), product.Size, product.ID)
+func (p *productRepositoryImpl) UpdateProduct(storeId int64, product *model.Product) error {
+	tx := p.transaction.MustBegin()
+	var count int
+	if err := tx.Get(&count, "SELECT COUNT(id) FROM store_product WHERE store_id = ? AND product_id = ?", storeId, product.ID); err != nil || count == 0 {
+		_ = tx.Rollback()
+		if err != nil {
+			if errors.Is(err, sql.ErrNoRows) {
+				return err
+			}
+			panic(err)
+		} else {
+			return sql.ErrNoRows
+		}
+	}
+
+	fields := reflect.ValueOf(product).Elem()
+	for i := 0; i < fields.NumField(); i++ {
+		field := fields.Field(i)
+		if field.IsZero() {
+			continue
+		}
+		fieldName := fields.Type().Field(i).Tag.Get("db")
+		if fieldName == "ID" {
+			continue
+		}
+		fieldValue := field.Interface()
+		if fields.Type().Field(i).Type.String() == "time.Time" {
+			if fieldValue.(time.Time).Unix() == 0 {
+				continue
+			}
+			fieldValue = fieldValue.(time.Time).Format("2006-01-02 15:04:05")
+		}
+
+		_ = tx.MustExec(fmt.Sprintf("UPDATE product SET %s = ? WHERE id = ?", fieldName), fieldValue, product.ID)
+	}
+
+	err := tx.Commit()
 	if err != nil {
 		panic(err)
 	}

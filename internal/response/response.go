@@ -5,6 +5,7 @@ const (
 	MessageInvalidInput  = "invalid input"
 	MessageInternalError = "internal server error"
 	MessageUnauthorized  = "unauthorized"
+	MessageNotFound      = "not found"
 )
 
 type Meta struct {

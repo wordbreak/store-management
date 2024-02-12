@@ -15,6 +15,7 @@ type StoreService interface {
 	GetStoreByUserID(userId int64) (*model.Store, error)
 	CreateProduct(storeId int64, product *model.Product) (int64, error)
 	DeleteProduct(storeId, productId int64) error
+	UpdateProduct(storeId int64, product *model.Product) error
 }
 
 type storeServiceImpl struct {
@@ -36,15 +37,19 @@ func (s *storeServiceImpl) CreateProduct(storeId int64, product *model.Product) 
 	return s.repo.product.CreateProduct(storeId, product)
 }
 
-func (s *storeServiceImpl) DeleteProduct(userId, productId int64) error {
+func (s *storeServiceImpl) DeleteProduct(storeId, productId int64) error {
+	if err := s.repo.product.DeleteProduct(storeId, productId); err != nil {
+		return ErrProductNotFound
+	}
+	return nil
+}
+
+func (s *storeServiceImpl) UpdateProduct(userId int64, product *model.Product) error {
 	store, err := s.repo.store.FindStoreByUserID(userId)
 	if err != nil {
 		return ErrProductNotFound
 	}
-	if err = s.repo.product.DeleteProduct(store.ID, productId); err != nil {
-		return ErrProductNotFound
-	}
-	return nil
+	return s.repo.product.UpdateProduct(store.ID, product)
 }
 
 func NewStoreService(repo repository.Repository) StoreService {
