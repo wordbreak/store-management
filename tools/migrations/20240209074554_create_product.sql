@@ -9,7 +9,7 @@ CREATE TABLE product (
     description TEXT NOT NULL,
     barcode VARCHAR(255) NOT NULL,
     expiry_date DATE NOT NULL,
-    size VARCHAR(64) NOT NULL,
+    size VARCHAR(64) NOT NULL
 ) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci;
 -- +goose StatementEnd
 
