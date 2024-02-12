@@ -32,6 +32,7 @@ func Init(router *gin.Engine, srv *service.Service) {
 	v1.POST("/auth/register", authController.Register)
 	v1.POST("/auth/login", authController.Login)
 
+	v1.GET("/product/:id", AuthRequiredHandler(productController.Get))
 	v1.POST("/product", AuthRequiredHandler(productController.Create))
 	v1.DELETE("/product/:id", AuthRequiredHandler(productController.Delete))
 	v1.PATCH("/product/:id", AuthRequiredHandler(productController.Update))

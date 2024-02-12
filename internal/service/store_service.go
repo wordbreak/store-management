@@ -13,6 +13,7 @@ var (
 
 type StoreService interface {
 	GetStoreByUserID(userId int64) (*model.Store, error)
+	GetProduct(storeId, productId int64) (*model.Product, error)
 	CreateProduct(storeId int64, product *model.Product) (int64, error)
 	DeleteProduct(storeId, productId int64) error
 	UpdateProduct(storeId int64, product *model.Product) error
@@ -31,6 +32,15 @@ func (s *storeServiceImpl) GetStoreByUserID(userId int64) (*model.Store, error) 
 	} else {
 		return store, nil
 	}
+}
+
+func (s *storeServiceImpl) GetProduct(storeId, productId int64) (*model.Product, error) {
+	product, err := s.repo.product.FindProduct(storeId, productId)
+	if err != nil {
+		return nil, ErrProductNotFound
+	}
+	return product, nil
+
 }
 
 func (s *storeServiceImpl) CreateProduct(storeId int64, product *model.Product) (int64, error) {

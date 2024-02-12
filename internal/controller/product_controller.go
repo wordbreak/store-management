@@ -13,6 +13,7 @@ import (
 )
 
 type ProductController interface {
+	Get(ctx *AuthContext)
 	Create(ctx *AuthContext)
 	Delete(ctx *AuthContext)
 	Update(ctx *AuthContext)
@@ -37,6 +38,42 @@ type createInput struct {
 	Barcode     string  `json:"barcode" binding:"required"`
 	ExpiryDate  int64   `json:"expiry_date" binding:"required"`
 	Size        string  `json:"size" binding:"required"`
+}
+
+type getUriInput struct {
+	ID int64 `uri:"id" binding:"required"`
+}
+
+func (c *productController) Get(ctx *AuthContext) {
+	var input getUriInput
+
+	if err := ctx.ShouldBindUri(&input); err != nil {
+		ctx.JSON(http.StatusBadRequest, response.New(http.StatusBadRequest, response.MessageInvalidInput, nil))
+		return
+	}
+
+	store, err := c.storeService.GetStoreByUserID(ctx.User.ID)
+	if err != nil {
+		if errors.Is(err, service.ErrStoreNotFound) {
+			ctx.JSON(http.StatusNotFound, response.New(http.StatusNotFound, response.MessageNotFound, nil))
+			return
+		}
+		ctx.JSON(http.StatusInternalServerError, response.New(http.StatusInternalServerError, response.MessageInternalError, nil))
+		return
+	}
+
+	product, err := c.storeService.GetProduct(store.ID, input.ID)
+	if err != nil {
+		if errors.Is(err, service.ErrProductNotFound) || errors.Is(err, sql.ErrNoRows) {
+			ctx.JSON(http.StatusNotFound, response.New(http.StatusNotFound, response.MessageNotFound, nil))
+			return
+		}
+		ctx.JSON(http.StatusInternalServerError, response.New(http.StatusInternalServerError, response.MessageInternalError, nil))
+		return
+	}
+
+	ctx.JSON(http.StatusOK, response.New(http.StatusOK, response.MessageOK, product))
+
 }
 
 func (c *productController) Create(ctx *AuthContext) {

@@ -14,8 +14,8 @@ type ProductRepository interface {
 	CreateProduct(storeId int64, product *model.Product) (int64, error)
 	UpdateProduct(storeId int64, product *model.Product) error
 	DeleteProduct(storeId, productId int64) error
-	FindProductByID(productID int64) (*model.Product, error)
-	FindProductsByStoreID(storeID int64, cursor int64, limit int64) ([]*model.Product, error)
+	FindProduct(storeId, productId int64) (*model.Product, error)
+	FindProductsByStoreID(storeId int64, cursor int64, limit int64) ([]*model.Product, error)
 }
 type productRepositoryImpl struct {
 	writer      datasource.SQL
@@ -107,9 +107,18 @@ func (p *productRepositoryImpl) DeleteProduct(storeId, productId int64) error {
 	return tx.Commit()
 }
 
-func (p *productRepositoryImpl) FindProductByID(productID int64) (*model.Product, error) {
+func (p *productRepositoryImpl) FindProduct(storeId, productId int64) (*model.Product, error) {
+	var count int
+	err := p.reader.Get(&count, "SELECT count(id) FROM store_product WHERE store_id = ? AND product_id = ?", storeId, productId)
+	if err != nil {
+		panic(err)
+	}
+	if count == 0 {
+		return nil, datasource.ErrNoRows
+	}
+
 	var product model.Product
-	err := p.reader.Get(&product, "SELECT * FROM product WHERE id = ?", productID)
+	err = p.reader.Get(&product, "SELECT * FROM product WHERE id = ?", productId)
 	if err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
 			return nil, datasource.ErrNoRows
@@ -119,9 +128,9 @@ func (p *productRepositoryImpl) FindProductByID(productID int64) (*model.Product
 	return &product, nil
 }
 
-func (p *productRepositoryImpl) FindProductsByStoreID(storeID int64, cursor int64, limit int64) ([]*model.Product, error) {
+func (p *productRepositoryImpl) FindProductsByStoreID(storeId int64, cursor int64, limit int64) ([]*model.Product, error) {
 	var products []*model.Product
-	err := p.reader.Select(&products, "SELECT * FROM product WHERE store_id = ? AND id < ? ORDER BY id DESC LIMIT ?", storeID, cursor, limit)
+	err := p.reader.Select(&products, "SELECT * FROM product WHERE store_id = ? AND id < ? ORDER BY id DESC LIMIT ?", storeId, cursor, limit)
 	if err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
 			return nil, datasource.ErrNoRows
