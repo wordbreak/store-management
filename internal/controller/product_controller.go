@@ -19,6 +19,7 @@ type ProductController interface {
 	Delete(ctx *AuthContext)
 	Update(ctx *AuthContext)
 	List(ctx *AuthContext)
+	Search(ctx *AuthContext)
 }
 
 type productController struct {
@@ -228,6 +229,30 @@ func (c *productController) List(ctx *AuthContext) {
 	}
 
 	products, err := c.storeService.GetProductsWithPagination(store.ID, cursor, defaultLimit)
+	if err != nil {
+		ctx.JSON(http.StatusInternalServerError, response.New(http.StatusInternalServerError, response.MessageInternalError, nil))
+		return
+	}
+
+	ctx.JSON(http.StatusOK, response.New(http.StatusOK, response.MessageOK, gin.H{
+		"items": products,
+	}))
+}
+
+func (c *productController) Search(ctx *AuthContext) {
+	query := ctx.Query("query")
+	if query == "" {
+		ctx.JSON(http.StatusBadRequest, response.New(http.StatusBadRequest, response.MessageInvalidInput, nil))
+		return
+	}
+
+	store, err := c.storeService.GetStoreByUserID(ctx.User.ID)
+	if err != nil {
+		ctx.JSON(http.StatusInternalServerError, response.New(http.StatusInternalServerError, response.MessageInternalError, nil))
+		return
+	}
+
+	products, err := c.storeService.SearchProducts(store.ID, query)
 	if err != nil {
 		ctx.JSON(http.StatusInternalServerError, response.New(http.StatusInternalServerError, response.MessageInternalError, nil))
 		return

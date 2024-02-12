@@ -18,6 +18,7 @@ type StoreService interface {
 	CreateProduct(storeId int64, product *model.Product) (int64, error)
 	DeleteProduct(storeId, productId int64) error
 	UpdateProduct(storeId int64, product *model.Product) error
+	SearchProducts(storeId int64, query string) ([]*model.Product, error)
 }
 
 type storeServiceImpl struct {
@@ -67,6 +68,9 @@ func (s *storeServiceImpl) GetProductsWithPagination(storeId int64, cursor int64
 	return s.repo.product.FindProductsWithPagination(storeId, cursor, limit)
 }
 
+func (s *storeServiceImpl) SearchProducts(storeId int64, query string) ([]*model.Product, error) {
+	return s.repo.product.SearchProducts(storeId, query)
+}
 func NewStoreService(repo repository.Repository) StoreService {
 	service := &storeServiceImpl{}
 	service.repo.product = repo.ProductRepository()

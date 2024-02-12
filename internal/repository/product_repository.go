@@ -16,6 +16,7 @@ type ProductRepository interface {
 	DeleteProduct(storeId, productId int64) error
 	FindProduct(storeId, productId int64) (*model.Product, error)
 	FindProductsWithPagination(storeId int64, cursor int64, limit int64) ([]*model.Product, error)
+	SearchProducts(storeId int64, query string) ([]*model.Product, error)
 }
 type productRepositoryImpl struct {
 	writer      datasource.SQL
@@ -151,10 +152,22 @@ func (p *productRepositoryImpl) FindProductsWithPagination(storeId int64, cursor
 		err = p.reader.Select(&products, query, storeId, limit)
 	}
 
-	if err != nil {
-		if errors.Is(err, sql.ErrNoRows) {
-			return nil, datasource.ErrNoRows
-		}
+	if err != nil && !errors.Is(err, sql.ErrNoRows) {
+		panic(err)
+	}
+	return products, nil
+}
+
+func (p *productRepositoryImpl) SearchProducts(storeId int64, keyword string) ([]*model.Product, error) {
+	var products []*model.Product
+	query := `
+        SELECT p.* FROM product p
+        INNER JOIN store_product sp ON p.id = sp.product_id
+        WHERE sp.store_id = ? AND name LIKE ?
+        ORDER BY p.id DESC
+    `
+	err := p.reader.Select(&products, query, storeId, "%"+keyword+"%")
+	if err != nil && !errors.Is(err, sql.ErrNoRows) {
 		panic(err)
 	}
 	return products, nil
