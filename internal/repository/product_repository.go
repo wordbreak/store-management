@@ -7,6 +7,7 @@ import (
 	"reflect"
 	"store-management/internal/datasource"
 	"store-management/internal/model"
+	"strings"
 	"time"
 )
 
@@ -32,10 +33,26 @@ func NewProductRepository(writer, reader datasource.SQL, transaction datasource.
 	}
 }
 
+var initialKoreanRunes = [19]rune{'ㄱ', 'ㄲ', 'ㄴ', 'ㄷ', 'ㄸ', 'ㄹ', 'ㅁ', 'ㅂ', 'ㅃ', 'ㅅ', 'ㅆ', 'ㅇ', 'ㅈ', 'ㅉ', 'ㅊ', 'ㅋ', 'ㅌ', 'ㅍ', 'ㅎ'}
+
+func (p *productRepositoryImpl) extractAbstractKoreanName(text string) string {
+	var abstractName strings.Builder
+	for _, r := range text {
+		if r >= '가' && r <= '힣' {
+			initialRune := initialKoreanRunes[(r-'가')/588] // 588 = 21(중성 갯수) * 28(종성 갯수)
+			abstractName.WriteRune(initialRune)
+		} else {
+			abstractName.WriteRune(r)
+		}
+	}
+	return abstractName.String()
+}
+
 func (p *productRepositoryImpl) CreateProduct(storeId int64, product *model.Product) (int64, error) {
 	tx := p.transaction.MustBegin()
-	res := tx.MustExec("INSERT INTO product (category, price, cost, name, description, barcode, expiry_date, size) VALUES (?, ?, ?, ?, ?, ?, ?, ?)",
-		product.Category, product.Price, product.Cost, product.Name, product.Description, product.Barcode, product.ExpiryDate.Format("2006-01-02 15:04:05"), product.Size)
+	product.AbstractName = p.extractAbstractKoreanName(product.Name)
+	res := tx.MustExec("INSERT INTO product (category, price, cost, name, abstract_name, description, barcode, expiry_date, size) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)",
+		product.Category, product.Price, product.Cost, product.Name, product.AbstractName, product.Description, product.Barcode, product.ExpiryDate.Format("2006-01-02 15:04:05"), product.Size)
 	lastInsertId, err := res.LastInsertId()
 	if err != nil {
 		_ = tx.Rollback()
@@ -83,6 +100,9 @@ func (p *productRepositoryImpl) UpdateProduct(storeId int64, product *model.Prod
 		}
 
 		_ = tx.MustExec(fmt.Sprintf("UPDATE product SET %s = ? WHERE id = ?", fieldName), fieldValue, product.ID)
+		if fieldName == "name" {
+			_ = tx.MustExec("UPDATE product SET abstract_name = ? WHERE id = ?", p.extractAbstractKoreanName(fieldValue.(string)), product.ID)
+		}
 	}
 
 	err := tx.Commit()
@@ -163,10 +183,10 @@ func (p *productRepositoryImpl) SearchProducts(storeId int64, keyword string) ([
 	query := `
         SELECT p.* FROM product p
         INNER JOIN store_product sp ON p.id = sp.product_id
-        WHERE sp.store_id = ? AND name LIKE ?
+        WHERE sp.store_id = ? AND (name LIKE ? OR abstract_name LIKE ?)
         ORDER BY p.id DESC
     `
-	err := p.reader.Select(&products, query, storeId, "%"+keyword+"%")
+	err := p.reader.Select(&products, query, storeId, "%"+keyword+"%", "%"+p.extractAbstractKoreanName(keyword)+"%")
 	if err != nil && !errors.Is(err, sql.ErrNoRows) {
 		panic(err)
 	}
