@@ -12,6 +12,7 @@ type repositoryImpl struct {
 	writer      datasource.SQL
 	reader      datasource.SQL
 	transaction datasource.Transaction
+	cache       datasource.Cache
 
 	user    UserRepository
 	store   StoreRepository
@@ -32,7 +33,7 @@ func (r *repositoryImpl) ProductRepository() ProductRepository {
 
 var repo Repository
 
-func Init(writer, reader datasource.SQL, transaction datasource.Transaction) {
+func Init(writer, reader datasource.SQL, transaction datasource.Transaction, cache datasource.Cache) {
 	if repo != nil {
 		return
 	}
@@ -41,8 +42,9 @@ func Init(writer, reader datasource.SQL, transaction datasource.Transaction) {
 		writer:      writer,
 		reader:      reader,
 		transaction: transaction,
+		cache:       cache,
 
-		user:    NewUserRepository(writer, reader),
+		user:    NewUserRepository(writer, reader, cache),
 		store:   NewStoreRepository(writer, reader),
 		product: NewProductRepository(writer, reader, transaction),
 	}

@@ -5,6 +5,7 @@ import (
 	"errors"
 	"store-management/internal/datasource"
 	"store-management/internal/model"
+	"time"
 
 	"github.com/go-sql-driver/mysql"
 )
@@ -13,17 +14,20 @@ type UserRepository interface {
 	CreateUser(phoneNumber, password string) error
 	FindUser(phoneNumber string) (*model.User, error)
 	FindUserByID(id int64) (*model.User, error)
+	BlockAuthToken(string) error
 }
 
 type userRepositoryImpl struct {
 	writer datasource.SQL
 	reader datasource.SQL
+	cache  datasource.Cache
 }
 
-func NewUserRepository(writer, reader datasource.SQL) UserRepository {
+func NewUserRepository(writer, reader datasource.SQL, cache datasource.Cache) UserRepository {
 	return &userRepositoryImpl{
 		writer: writer,
 		reader: reader,
+		cache:  cache,
 	}
 }
 
@@ -65,4 +69,9 @@ func (u *userRepositoryImpl) FindUserByID(id int64) (*model.User, error) {
 		panic(err)
 	}
 	return &user, err
+}
+
+func (u *userRepositoryImpl) BlockAuthToken(authToken string) error {
+	_ = u.cache.Set(authToken, struct{}{}, time.Hour)
+	return nil
 }

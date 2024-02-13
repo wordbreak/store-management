@@ -49,7 +49,8 @@ func main() {
 		DBName: os.Getenv("DB_READER_DBNAME"),
 	})
 	defer sqlReader.Close()
-	repository.Init(sqlWriter, sqlReader, sqlWriter)
+	cache := datasource.NewInMemoryCache()
+	repository.Init(sqlWriter, sqlReader, sqlWriter, cache)
 	service.Init(repository.Get())
 	r.Use(middleware.JwtMiddleware(repository.Get().UserRepository()))
 	router.Init(r, service.Get())

@@ -20,6 +20,7 @@ var (
 type AuthService interface {
 	Register(phoneNumber string, password string) error
 	Login(phoneNumber string, password string) (*model.User, error)
+	Logout(authToken string) error
 }
 
 type authServiceImpl struct {
@@ -109,6 +110,11 @@ func (s authServiceImpl) Login(phoneNumber string, password string) (*model.User
 	} else {
 		return nil, ErrUserNotFound
 	}
+}
+
+func (s authServiceImpl) Logout(authToken string) error {
+	_ = s.repo.user.BlockAuthToken(authToken)
+	return nil
 }
 
 func NewAuthService(repo repository.Repository) AuthService {

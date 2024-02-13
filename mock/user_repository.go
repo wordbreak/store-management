@@ -34,3 +34,8 @@ func (m *UserRepositoryMock) FindUserByID(id int64) (*model.User, error) {
 	}
 	return user.(*model.User), err
 }
+
+func (m *UserRepositoryMock) BlockAuthToken(token string) error {
+	args := m.Called(token)
+	return args.Error(0)
+}

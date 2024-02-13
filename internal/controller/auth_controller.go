@@ -16,6 +16,7 @@ import (
 type AuthController interface {
 	Register(ctx *gin.Context)
 	Login(ctx *gin.Context)
+	Logout(ctx *gin.Context)
 }
 
 type authController struct {
@@ -90,5 +91,13 @@ func (c authController) Login(ctx *gin.Context) {
 
 	ctx.SetSameSite(http.SameSiteLaxMode)
 	ctx.SetCookie("auth_token", tokenString, int(time.Hour.Seconds()), "/", "", false, true)
+	ctx.JSON(http.StatusOK, response.New(http.StatusOK, response.MessageOK, nil))
+}
+
+func (c authController) Logout(ctx *gin.Context) {
+	if authToken, err := ctx.Cookie("auth_token"); authToken != "" && err != nil {
+		_ = c.authService.Logout(authToken)
+	}
+	ctx.SetCookie("auth_token", "", -1, "/", "", false, true)
 	ctx.JSON(http.StatusOK, response.New(http.StatusOK, response.MessageOK, nil))
 }

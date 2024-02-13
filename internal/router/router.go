@@ -31,6 +31,7 @@ func Init(router *gin.Engine, srv *service.Service) {
 	v1 := router.Group("/v1")
 	v1.POST("/auth/register", authController.Register)
 	v1.POST("/auth/login", authController.Login)
+	v1.POST("/auth/logout", authController.Logout)
 
 	v1.GET("/product/:id", AuthRequiredHandler(productController.Get))
 	v1.GET("/products", AuthRequiredHandler(productController.List))
